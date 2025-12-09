@@ -16,11 +16,13 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import type { Portfolio, Program, WorkItem } from "@shared/schema";
 
-function formatBudget(amount: number | null): string {
+function formatBudget(amount: number | string | null): string {
   if (!amount) return "N/A";
-  if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
-  if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
-  return `$${amount}`;
+  const num = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(num)) return "N/A";
+  if (num >= 1000000) return `$${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `$${(num / 1000).toFixed(0)}K`;
+  return `$${num.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function getStatusColor(status: string): string {

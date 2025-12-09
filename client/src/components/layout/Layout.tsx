@@ -44,8 +44,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
-          <img src={logo} alt="Nexus Logo" className="h-8 w-8 rounded mr-3" />
-          <span className="font-display font-bold text-xl text-white tracking-tight">Nexus</span>
+          <img src={logo} alt="Resource-IT Logo" className="h-8 w-8 rounded mr-3" />
+          <span className="font-display font-bold text-xl text-white tracking-tight">Resource-IT</span>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -111,7 +111,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
               <Menu className="h-6 w-6" />
             </Button>
-            <span className="font-display font-bold text-lg">Nexus</span>
+            <span className="font-display font-bold text-lg">Resource-IT</span>
           </div>
           <Avatar className="h-8 w-8">
             <AvatarFallback>JD</AvatarFallback>
