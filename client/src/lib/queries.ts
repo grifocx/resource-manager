@@ -257,6 +257,68 @@ export function useCreateSkill() {
   });
 }
 
+export function useWorkItemSkills(workItemId: number) {
+  return useQuery<Skill[]>({
+    queryKey: [`/api/work-items/${workItemId}/skills`],
+    enabled: !!workItemId,
+  });
+}
+
+export function useAddWorkItemSkill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ workItemId, skillId, levelRequired }: { workItemId: number; skillId: number; levelRequired?: number }) => {
+      const res = await apiRequest("POST", `/api/work-items/${workItemId}/skills`, { skillId, levelRequired });
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/work-items/${variables.workItemId}/skills`] });
+    },
+  });
+}
+
+export function useRemoveWorkItemSkill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ workItemId, skillId }: { workItemId: number; skillId: number }) => {
+      await apiRequest("DELETE", `/api/work-items/${workItemId}/skills/${skillId}`);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/work-items/${variables.workItemId}/skills`] });
+    },
+  });
+}
+
+export interface ResourceSuggestion {
+  resource: Resource;
+  skillScore: number;
+  availabilityScore: number;
+  netAvailability: number;
+  totalScore: number;
+}
+
+export function useSuggestResources() {
+  return useMutation({
+    mutationFn: async ({ workItemId }: { workItemId: number }) => {
+      const res = await apiRequest("POST", "/api/planning/suggest-resources", { workItemId });
+      return res.json() as Promise<ResourceSuggestion[]>;
+    },
+  });
+}
+
+export function useAllocateResources() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ resourceId, workItemId, totalHours }: { resourceId: number; workItemId: number; totalHours: number }) => {
+      const res = await apiRequest("POST", "/api/planning/allocate", { resourceId, workItemId, totalHours });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/allocations"] });
+    },
+  });
+}
+
 export function getTeamName(teams: Team[], teamId: number): string {
   return teams.find((t) => t.id === teamId)?.name || "Unknown Team";
 }

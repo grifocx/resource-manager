@@ -118,11 +118,25 @@ export const workItems = pgTable("work_items", {
   programId: integer("program_id").references(() => programs.id),
   estimatedBudget: decimal("estimated_budget", { precision: 12, scale: 2 }),
   actualBudget: decimal("actual_budget", { precision: 12, scale: 2 }),
+  estimatedHours: integer("estimated_hours"),
+  complexity: varchar("complexity", { length: 50 }),
 });
 
 export const insertWorkItemSchema = createInsertSchema(workItems).omit({ id: true });
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 export type WorkItem = typeof workItems.$inferSelect;
+
+export const workItemSkills = pgTable("work_item_skills", {
+  workItemId: integer("work_item_id").references(() => workItems.id, { onDelete: "cascade" }).notNull(),
+  skillId: integer("skill_id").references(() => skills.id, { onDelete: "cascade" }).notNull(),
+  levelRequired: integer("level_required").default(1),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.workItemId, table.skillId] }),
+}));
+
+export const insertWorkItemSkillSchema = createInsertSchema(workItemSkills);
+export type InsertWorkItemSkill = z.infer<typeof insertWorkItemSkillSchema>;
+export type WorkItemSkill = typeof workItemSkills.$inferSelect;
 
 export const allocations = pgTable("allocations", {
   id: serial("id").primaryKey(),
