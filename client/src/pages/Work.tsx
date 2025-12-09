@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Layout from "@/components/layout/Layout";
 import { useWorkItems, useCreateWorkItem, useDeleteWorkItem } from "@/lib/queries";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,19 +17,29 @@ import {
   Plus, 
   Calendar,
   Trash2,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useSearch, useLocation } from "wouter";
 
 export default function Work() {
   const { data: workItems = [], isLoading } = useWorkItems();
   const createWorkItem = useCreateWorkItem();
   const deleteWorkItem = useDeleteWorkItem();
   const { toast } = useToast();
+  const searchParams = useSearch();
+  const [, navigate] = useLocation();
+  
+  const urlParams = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+  const tabFromUrl = urlParams.get("tab");
+  const statusFilter = urlParams.get("status");
+  const priorityFilter = urlParams.get("priority");
   
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
   const [formData, setFormData] = useState({
     title: "",
     type: "Project",
@@ -41,10 +51,31 @@ export default function Work() {
     progress: "0",
   });
 
-  const filteredItems = workItems.filter(item => 
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (tabFromUrl === "projects") {
+      setActiveTab("projects");
+    } else if (tabFromUrl === "demands") {
+      setActiveTab("demands");
+    } else if (tabFromUrl === "ktlo") {
+      setActiveTab("ktlo");
+    }
+  }, [tabFromUrl]);
+
+  const filteredItems = useMemo(() => {
+    return workItems.filter(item => {
+      const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = !statusFilter || item.status === statusFilter;
+      const matchesPriority = !priorityFilter || item.priority === priorityFilter;
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [workItems, searchTerm, statusFilter, priorityFilter]);
+  
+  const clearFilters = () => {
+    navigate("/work");
+  };
+  
+  const hasActiveFilters = statusFilter || priorityFilter;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,12 +251,38 @@ export default function Work() {
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="w-full">
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800">
+            <span className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">Active filters:</span>
+            {statusFilter && (
+              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
+                Status: {statusFilter}
+              </Badge>
+            )}
+            {priorityFilter && (
+              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
+                Priority: {priorityFilter}
+              </Badge>
+            )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters}
+              className="ml-auto text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100"
+              data-testid="button-clear-filters"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Clear filters
+            </Button>
+          </div>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 mb-6">
-            <TabsTrigger value="all">All Items ({filteredItems.length})</TabsTrigger>
-            <TabsTrigger value="projects">Projects ({filteredItems.filter(i => i.type === "Project").length})</TabsTrigger>
-            <TabsTrigger value="demands">Demands ({filteredItems.filter(i => i.type === "Demand").length})</TabsTrigger>
-            <TabsTrigger value="ktlo">KTLO ({filteredItems.filter(i => i.type === "KTLO").length})</TabsTrigger>
+            <TabsTrigger value="all" data-testid="tab-all">All Items ({filteredItems.length})</TabsTrigger>
+            <TabsTrigger value="projects" data-testid="tab-projects">Projects ({filteredItems.filter(i => i.type === "Project").length})</TabsTrigger>
+            <TabsTrigger value="demands" data-testid="tab-demands">Demands ({filteredItems.filter(i => i.type === "Demand").length})</TabsTrigger>
+            <TabsTrigger value="ktlo" data-testid="tab-ktlo">KTLO ({filteredItems.filter(i => i.type === "KTLO").length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">

@@ -14,11 +14,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import logo from "@assets/generated_images/minimalist_abstract_geometric_logo_for_it_resource_management.png";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { toast } = useToast();
 
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
@@ -81,16 +83,38 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="p-4 border-t border-slate-800">
-          <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-slate-400 hover:text-white">
+          <button 
+            onClick={() => navigate("/settings")}
+            className={cn(
+              "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-colors text-sm font-medium",
+              location === "/settings"
+                ? "bg-indigo-600 text-white"
+                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+            )}
+            data-testid="button-settings"
+          >
             <Settings className="h-5 w-5" />
             Settings
           </button>
-          <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-slate-400 hover:text-white mt-1">
+          <button 
+            onClick={() => {
+              toast({
+                title: "Sign Out",
+                description: "Authentication is not enabled. This feature requires user login functionality to be implemented.",
+              });
+            }}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-slate-400 hover:text-white mt-1"
+            data-testid="button-signout"
+          >
             <LogOut className="h-5 w-5" />
             Sign Out
           </button>
           
-          <div className="mt-6 flex items-center gap-3 px-3">
+          <div 
+            className="mt-6 flex items-center gap-3 px-3 cursor-pointer rounded-lg py-2 hover:bg-slate-800 transition-colors"
+            onClick={() => navigate("/settings")}
+            data-testid="button-profile"
+          >
             <Avatar className="h-9 w-9 border border-slate-700">
               <AvatarImage src="" />
               <AvatarFallback className="bg-indigo-900 text-indigo-200 text-xs">JD</AvatarFallback>

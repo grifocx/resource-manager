@@ -11,8 +11,10 @@ import {
 import { useTeams, useResources, useWorkItems, useAllocations, getTeamName } from "@/lib/queries";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, PieChart, Pie, Legend } from "recharts";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
   const { data: resources = [], isLoading: resourcesLoading } = useResources();
   const { data: workItems = [], isLoading: workItemsLoading } = useWorkItems();
@@ -67,7 +69,11 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-sm border-slate-200 dark:border-slate-800" data-testid="card-utilization">
+        <Card 
+          className="shadow-sm border-slate-200 dark:border-slate-800 cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all" 
+          data-testid="card-utilization"
+          onClick={() => navigate("/capacity")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Utilization</CardTitle>
             <TrendingUp className="h-4 w-4 text-slate-500" />
@@ -86,7 +92,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-slate-200 dark:border-slate-800" data-testid="card-active-projects">
+        <Card 
+          className="shadow-sm border-slate-200 dark:border-slate-800 cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all" 
+          data-testid="card-active-projects"
+          onClick={() => navigate("/work?tab=projects&status=In+Progress")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
             <Briefcase className="h-4 w-4 text-slate-500" />
@@ -99,7 +109,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-slate-200 dark:border-slate-800" data-testid="card-team-members">
+        <Card 
+          className="shadow-sm border-slate-200 dark:border-slate-800 cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all" 
+          data-testid="card-team-members"
+          onClick={() => navigate("/resources")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Team Members</CardTitle>
             <Users className="h-4 w-4 text-slate-500" />
@@ -112,7 +126,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-slate-200 dark:border-slate-800" data-testid="card-critical-items">
+        <Card 
+          className="shadow-sm border-slate-200 dark:border-slate-800 cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all" 
+          data-testid="card-critical-items"
+          onClick={() => navigate("/work?priority=Critical")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Critical Items</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-500" />
