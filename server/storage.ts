@@ -3,22 +3,31 @@ import { eq, and } from "drizzle-orm";
 import {
   type User,
   type InsertUser,
+  type Department,
+  type InsertDepartment,
   type Team,
   type InsertTeam,
   type Resource,
   type InsertResource,
   type Skill,
   type InsertSkill,
+  type Portfolio,
+  type InsertPortfolio,
+  type Program,
+  type InsertProgram,
   type WorkItem,
   type InsertWorkItem,
   type Allocation,
   type InsertAllocation,
   type InsertResourceSkill,
   users,
+  departments,
   teams,
   resources,
   skills,
   resourceSkills,
+  portfolios,
+  programs,
   workItems,
   allocations,
 } from "@shared/schema";
@@ -27,6 +36,12 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  createDepartment(department: InsertDepartment): Promise<Department>;
+  listDepartments(): Promise<Department[]>;
+  getDepartment(id: number): Promise<Department | undefined>;
+  updateDepartment(id: number, department: Partial<InsertDepartment>): Promise<Department | undefined>;
+  deleteDepartment(id: number): Promise<void>;
 
   createTeam(team: InsertTeam): Promise<Team>;
   listTeams(): Promise<Team[]>;
@@ -48,9 +63,23 @@ export interface IStorage {
   getSkill(id: number): Promise<Skill | undefined>;
   deleteSkill(id: number): Promise<void>;
 
+  createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio>;
+  listPortfolios(): Promise<Portfolio[]>;
+  getPortfolio(id: number): Promise<Portfolio | undefined>;
+  updatePortfolio(id: number, portfolio: Partial<InsertPortfolio>): Promise<Portfolio | undefined>;
+  deletePortfolio(id: number): Promise<void>;
+
+  createProgram(program: InsertProgram): Promise<Program>;
+  listPrograms(): Promise<Program[]>;
+  getProgram(id: number): Promise<Program | undefined>;
+  getProgramsByPortfolio(portfolioId: number): Promise<Program[]>;
+  updateProgram(id: number, program: Partial<InsertProgram>): Promise<Program | undefined>;
+  deleteProgram(id: number): Promise<void>;
+
   createWorkItem(workItem: InsertWorkItem): Promise<WorkItem>;
   listWorkItems(): Promise<WorkItem[]>;
   getWorkItem(id: number): Promise<WorkItem | undefined>;
+  getWorkItemsByProgram(programId: number): Promise<WorkItem[]>;
   updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined>;
   deleteWorkItem(id: number): Promise<void>;
 
@@ -76,6 +105,29 @@ export class DbStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async createDepartment(department: InsertDepartment): Promise<Department> {
+    const [newDept] = await db.insert(departments).values(department).returning();
+    return newDept;
+  }
+
+  async listDepartments(): Promise<Department[]> {
+    return db.select().from(departments);
+  }
+
+  async getDepartment(id: number): Promise<Department | undefined> {
+    const [dept] = await db.select().from(departments).where(eq(departments.id, id)).limit(1);
+    return dept;
+  }
+
+  async updateDepartment(id: number, department: Partial<InsertDepartment>): Promise<Department | undefined> {
+    const [updated] = await db.update(departments).set(department).where(eq(departments.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDepartment(id: number): Promise<void> {
+    await db.delete(departments).where(eq(departments.id, id));
   }
 
   async createTeam(team: InsertTeam): Promise<Team> {
@@ -164,6 +216,56 @@ export class DbStorage implements IStorage {
     await db.delete(skills).where(eq(skills.id, id));
   }
 
+  async createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio> {
+    const [newPortfolio] = await db.insert(portfolios).values(portfolio).returning();
+    return newPortfolio;
+  }
+
+  async listPortfolios(): Promise<Portfolio[]> {
+    return db.select().from(portfolios);
+  }
+
+  async getPortfolio(id: number): Promise<Portfolio | undefined> {
+    const [portfolio] = await db.select().from(portfolios).where(eq(portfolios.id, id)).limit(1);
+    return portfolio;
+  }
+
+  async updatePortfolio(id: number, portfolio: Partial<InsertPortfolio>): Promise<Portfolio | undefined> {
+    const [updated] = await db.update(portfolios).set(portfolio).where(eq(portfolios.id, id)).returning();
+    return updated;
+  }
+
+  async deletePortfolio(id: number): Promise<void> {
+    await db.delete(portfolios).where(eq(portfolios.id, id));
+  }
+
+  async createProgram(program: InsertProgram): Promise<Program> {
+    const [newProgram] = await db.insert(programs).values(program).returning();
+    return newProgram;
+  }
+
+  async listPrograms(): Promise<Program[]> {
+    return db.select().from(programs);
+  }
+
+  async getProgram(id: number): Promise<Program | undefined> {
+    const [program] = await db.select().from(programs).where(eq(programs.id, id)).limit(1);
+    return program;
+  }
+
+  async getProgramsByPortfolio(portfolioId: number): Promise<Program[]> {
+    return db.select().from(programs).where(eq(programs.portfolioId, portfolioId));
+  }
+
+  async updateProgram(id: number, program: Partial<InsertProgram>): Promise<Program | undefined> {
+    const [updated] = await db.update(programs).set(program).where(eq(programs.id, id)).returning();
+    return updated;
+  }
+
+  async deleteProgram(id: number): Promise<void> {
+    await db.delete(programs).where(eq(programs.id, id));
+  }
+
   async createWorkItem(workItem: InsertWorkItem): Promise<WorkItem> {
     const [newWorkItem] = await db.insert(workItems).values(workItem).returning();
     return newWorkItem;
@@ -176,6 +278,10 @@ export class DbStorage implements IStorage {
   async getWorkItem(id: number): Promise<WorkItem | undefined> {
     const [workItem] = await db.select().from(workItems).where(eq(workItems.id, id)).limit(1);
     return workItem;
+  }
+
+  async getWorkItemsByProgram(programId: number): Promise<WorkItem[]> {
+    return db.select().from(workItems).where(eq(workItems.programId, programId));
   }
 
   async updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined> {

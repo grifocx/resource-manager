@@ -2,9 +2,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import {
+  insertDepartmentSchema,
   insertTeamSchema,
   insertResourceSchema,
   insertSkillSchema,
+  insertPortfolioSchema,
+  insertProgramSchema,
   insertWorkItemSchema,
   insertAllocationSchema,
 } from "@shared/schema";
@@ -14,6 +17,81 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Departments
+  app.get("/api/departments", async (req, res) => {
+    try {
+      const departments = await storage.listDepartments();
+      res.json(departments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch departments" });
+    }
+  });
+
+  app.post("/api/departments", async (req, res) => {
+    try {
+      const validated = insertDepartmentSchema.parse(req.body);
+      const department = await storage.createDepartment(validated);
+      res.status(201).json(department);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create department" });
+      }
+    }
+  });
+
+  app.get("/api/departments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid department ID" });
+      }
+      const department = await storage.getDepartment(id);
+      if (!department) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+      res.json(department);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch department" });
+    }
+  });
+
+  app.patch("/api/departments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid department ID" });
+      }
+      const validated = insertDepartmentSchema.partial().parse(req.body);
+      const department = await storage.updateDepartment(id, validated);
+      if (!department) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+      res.json(department);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to update department" });
+      }
+    }
+  });
+
+  app.delete("/api/departments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid department ID" });
+      }
+      await storage.deleteDepartment(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete department" });
+    }
+  });
+
+  // Teams
   app.get("/api/teams", async (req, res) => {
     try {
       const teams = await storage.listTeams();
@@ -87,6 +165,7 @@ export async function registerRoutes(
     }
   });
 
+  // Resources
   app.get("/api/resources", async (req, res) => {
     try {
       const resources = await storage.listResources();
@@ -204,6 +283,7 @@ export async function registerRoutes(
     }
   });
 
+  // Skills
   app.get("/api/skills", async (req, res) => {
     try {
       const skills = await storage.listSkills();
@@ -240,6 +320,181 @@ export async function registerRoutes(
     }
   });
 
+  // Portfolios
+  app.get("/api/portfolios", async (req, res) => {
+    try {
+      const portfolios = await storage.listPortfolios();
+      res.json(portfolios);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch portfolios" });
+    }
+  });
+
+  app.post("/api/portfolios", async (req, res) => {
+    try {
+      const validated = insertPortfolioSchema.parse(req.body);
+      const portfolio = await storage.createPortfolio(validated);
+      res.status(201).json(portfolio);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create portfolio" });
+      }
+    }
+  });
+
+  app.get("/api/portfolios/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+      const portfolio = await storage.getPortfolio(id);
+      if (!portfolio) {
+        return res.status(404).json({ error: "Portfolio not found" });
+      }
+      res.json(portfolio);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch portfolio" });
+    }
+  });
+
+  app.get("/api/portfolios/:id/programs", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+      const programs = await storage.getProgramsByPortfolio(id);
+      res.json(programs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch portfolio programs" });
+    }
+  });
+
+  app.patch("/api/portfolios/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+      const validated = insertPortfolioSchema.partial().parse(req.body);
+      const portfolio = await storage.updatePortfolio(id, validated);
+      if (!portfolio) {
+        return res.status(404).json({ error: "Portfolio not found" });
+      }
+      res.json(portfolio);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to update portfolio" });
+      }
+    }
+  });
+
+  app.delete("/api/portfolios/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+      await storage.deletePortfolio(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete portfolio" });
+    }
+  });
+
+  // Programs
+  app.get("/api/programs", async (req, res) => {
+    try {
+      const programs = await storage.listPrograms();
+      res.json(programs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch programs" });
+    }
+  });
+
+  app.post("/api/programs", async (req, res) => {
+    try {
+      const validated = insertProgramSchema.parse(req.body);
+      const program = await storage.createProgram(validated);
+      res.status(201).json(program);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to create program" });
+      }
+    }
+  });
+
+  app.get("/api/programs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid program ID" });
+      }
+      const program = await storage.getProgram(id);
+      if (!program) {
+        return res.status(404).json({ error: "Program not found" });
+      }
+      res.json(program);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch program" });
+    }
+  });
+
+  app.get("/api/programs/:id/work-items", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid program ID" });
+      }
+      const workItems = await storage.getWorkItemsByProgram(id);
+      res.json(workItems);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch program work items" });
+    }
+  });
+
+  app.patch("/api/programs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid program ID" });
+      }
+      const validated = insertProgramSchema.partial().parse(req.body);
+      const program = await storage.updateProgram(id, validated);
+      if (!program) {
+        return res.status(404).json({ error: "Program not found" });
+      }
+      res.json(program);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        res.status(500).json({ error: "Failed to update program" });
+      }
+    }
+  });
+
+  app.delete("/api/programs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid program ID" });
+      }
+      await storage.deleteProgram(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete program" });
+    }
+  });
+
+  // Work Items
   app.get("/api/work-items", async (req, res) => {
     try {
       const workItems = await storage.listWorkItems();
@@ -313,6 +568,7 @@ export async function registerRoutes(
     }
   });
 
+  // Allocations
   app.get("/api/allocations", async (req, res) => {
     try {
       const allocations = await storage.listAllocations();

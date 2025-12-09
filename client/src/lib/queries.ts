@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "./queryClient";
-import type { Team, Resource, WorkItem, Allocation, Skill, InsertTeam, InsertResource, InsertWorkItem, InsertAllocation, InsertSkill } from "@shared/schema";
+import type { 
+  Team, Resource, WorkItem, Allocation, Skill, Department, Portfolio, Program,
+  InsertTeam, InsertResource, InsertWorkItem, InsertAllocation, InsertSkill, 
+  InsertDepartment, InsertPortfolio, InsertProgram 
+} from "@shared/schema";
+
+export function useDepartments() {
+  return useQuery<Department[]>({
+    queryKey: ["/api/departments"],
+  });
+}
 
 export function useTeams() {
   return useQuery<Team[]>({
@@ -29,6 +39,31 @@ export function useAllocations() {
 export function useSkills() {
   return useQuery<Skill[]>({
     queryKey: ["/api/skills"],
+  });
+}
+
+export function usePortfolios() {
+  return useQuery<Portfolio[]>({
+    queryKey: ["/api/portfolios"],
+  });
+}
+
+export function usePrograms() {
+  return useQuery<Program[]>({
+    queryKey: ["/api/programs"],
+  });
+}
+
+export function useCreateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: InsertDepartment) => {
+      const res = await apiRequest("POST", "/api/departments", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/departments"] });
+    },
   });
 }
 
@@ -79,6 +114,56 @@ export function useDeleteResource() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
+    },
+  });
+}
+
+export function useCreatePortfolio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: InsertPortfolio) => {
+      const res = await apiRequest("POST", "/api/portfolios", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+    },
+  });
+}
+
+export function useDeletePortfolio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/portfolios/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+    },
+  });
+}
+
+export function useCreateProgram() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: InsertProgram) => {
+      const res = await apiRequest("POST", "/api/programs", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    },
+  });
+}
+
+export function useDeleteProgram() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/programs/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     },
   });
 }
@@ -178,4 +263,19 @@ export function getTeamName(teams: Team[], teamId: number): string {
 
 export function getTeamColor(teams: Team[], teamId: number): string {
   return teams.find((t) => t.id === teamId)?.color || "bg-gray-500";
+}
+
+export function getDepartmentName(departments: Department[], departmentId: number | null): string {
+  if (!departmentId) return "Unassigned";
+  return departments.find((d) => d.id === departmentId)?.name || "Unknown Department";
+}
+
+export function getPortfolioName(portfolios: Portfolio[], portfolioId: number | null): string {
+  if (!portfolioId) return "Unassigned";
+  return portfolios.find((p) => p.id === portfolioId)?.name || "Unknown Portfolio";
+}
+
+export function getProgramName(programs: Program[], programId: number | null): string {
+  if (!programId) return "Unassigned";
+  return programs.find((p) => p.id === programId)?.name || "Unknown Program";
 }

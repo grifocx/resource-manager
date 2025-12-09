@@ -17,10 +17,23 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const departments = pgTable("departments", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  headcount: integer("headcount").default(0),
+  budget: decimal("budget", { precision: 12, scale: 2 }),
+});
+
+export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true });
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type Department = typeof departments.$inferSelect;
+
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   color: varchar("color", { length: 50 }).notNull(),
+  departmentId: integer("department_id").references(() => departments.id),
 });
 
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true });
@@ -35,6 +48,7 @@ export const resources = pgTable("resources", {
   capacity: integer("capacity").notNull().default(40),
   avatar: varchar("avatar", { length: 10 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
+  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }),
 });
 
 export const insertResourceSchema = createInsertSchema(resources).omit({ id: true });
@@ -44,6 +58,7 @@ export type Resource = typeof resources.$inferSelect;
 export const skills = pgTable("skills", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
+  category: varchar("category", { length: 100 }),
 });
 
 export const insertSkillSchema = createInsertSchema(skills).omit({ id: true });
@@ -61,6 +76,35 @@ export const insertResourceSkillSchema = createInsertSchema(resourceSkills);
 export type InsertResourceSkill = z.infer<typeof insertResourceSkillSchema>;
 export type ResourceSkill = typeof resourceSkills.$inferSelect;
 
+export const portfolios = pgTable("portfolios", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  owner: varchar("owner", { length: 255 }),
+  budget: decimal("budget", { precision: 12, scale: 2 }),
+  status: varchar("status", { length: 50 }).default("Active"),
+});
+
+export const insertPortfolioSchema = createInsertSchema(portfolios).omit({ id: true });
+export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
+export type Portfolio = typeof portfolios.$inferSelect;
+
+export const programs = pgTable("programs", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  portfolioId: integer("portfolio_id").references(() => portfolios.id),
+  status: varchar("status", { length: 50 }).default("Active"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  budget: decimal("budget", { precision: 12, scale: 2 }),
+  programManager: varchar("program_manager", { length: 255 }),
+});
+
+export const insertProgramSchema = createInsertSchema(programs).omit({ id: true });
+export type InsertProgram = z.infer<typeof insertProgramSchema>;
+export type Program = typeof programs.$inferSelect;
+
 export const workItems = pgTable("work_items", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -71,6 +115,9 @@ export const workItems = pgTable("work_items", {
   endDate: date("end_date").notNull(),
   description: text("description").notNull(),
   progress: integer("progress").notNull().default(0),
+  programId: integer("program_id").references(() => programs.id),
+  estimatedBudget: decimal("estimated_budget", { precision: 12, scale: 2 }),
+  actualBudget: decimal("actual_budget", { precision: 12, scale: 2 }),
 });
 
 export const insertWorkItemSchema = createInsertSchema(workItems).omit({ id: true });
