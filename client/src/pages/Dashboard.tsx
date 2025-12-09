@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Layout from "@/components/layout/Layout";
 import { 
@@ -12,9 +13,13 @@ import { useTeams, useResources, useWorkItems, useAllocations, getTeamName } fro
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, PieChart, Pie, Legend } from "recharts";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { WorkItemEditDialog } from "@/components/WorkItemEditDialog";
+import type { WorkItem } from "@shared/schema";
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
+  const [editingWorkItem, setEditingWorkItem] = useState<WorkItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
   const { data: resources = [], isLoading: resourcesLoading } = useResources();
   const { data: workItems = [], isLoading: workItemsLoading } = useWorkItems();
@@ -216,7 +221,15 @@ export default function Dashboard() {
           {workItems.length > 0 ? (
             <div className="space-y-4">
               {workItems.slice(0, 5).map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800" data-testid={`card-work-item-${item.id}`}>
+                <div 
+                  key={item.id} 
+                  className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-sm transition-all" 
+                  data-testid={`card-work-item-${item.id}`}
+                  onClick={() => {
+                    setEditingWorkItem(item);
+                    setEditDialogOpen(true);
+                  }}
+                >
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "p-2 rounded-full",
@@ -255,6 +268,12 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      <WorkItemEditDialog 
+        workItem={editingWorkItem} 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+      />
     </Layout>
   );
 }

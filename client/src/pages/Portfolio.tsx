@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Layout from "@/components/layout/Layout";
 import { useWorkItems, usePortfolios, usePrograms, useCreateWorkItem, getProgramName } from "@/lib/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Loader2, ChevronDown, ChevronRight, Folder, FolderOpen, FileText, DollarSign, Users, Calendar } from "lucide-react";
+import { Plus, Loader2, ChevronDown, ChevronRight, Folder, FolderOpen, FileText, DollarSign, Users, Calendar, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { WorkItemEditDialog } from "@/components/WorkItemEditDialog";
 import type { Portfolio, Program, WorkItem } from "@shared/schema";
 
 function formatBudget(amount: number | string | null): string {
@@ -57,14 +59,18 @@ function getPriorityColor(priority: string): string {
   }
 }
 
-function WorkItemCard({ item }: { item: WorkItem }) {
+function WorkItemCard({ item, onEdit }: { item: WorkItem; onEdit: (item: WorkItem) => void }) {
   return (
-    <Card className="border-l-4 border-l-slate-300 hover:shadow-sm transition-shadow" data-testid={`card-workitem-${item.id}`}>
+    <Card 
+      className="border-l-4 border-l-slate-300 hover:shadow-sm hover:border-l-indigo-400 transition-all cursor-pointer" 
+      data-testid={`card-workitem-${item.id}`}
+      onClick={() => onEdit(item)}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-slate-400" />
-            <span className="font-medium text-slate-900">{item.title}</span>
+            <span className="font-medium text-slate-900 dark:text-white">{item.title}</span>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={cn("text-xs", getPriorityColor(item.priority))}>
@@ -104,16 +110,16 @@ function WorkItemCard({ item }: { item: WorkItem }) {
   );
 }
 
-function ProgramSection({ program, workItems }: { program: Program; workItems: WorkItem[] }) {
+function ProgramSection({ program, workItems, onEditWorkItem }: { program: Program; workItems: WorkItem[]; onEditWorkItem: (item: WorkItem) => void }) {
   const [isOpen, setIsOpen] = useState(true);
   const programWorkItems = workItems.filter(w => w.programId === program.id);
   
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="ml-4 border-l-2 border-slate-200 pl-4">
-      <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 hover:bg-slate-50 rounded px-2 -ml-2" data-testid={`trigger-program-${program.id}`}>
+      <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded px-2 -ml-2" data-testid={`trigger-program-${program.id}`}>
         {isOpen ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
         {isOpen ? <FolderOpen className="h-4 w-4 text-indigo-500" /> : <Folder className="h-4 w-4 text-indigo-500" />}
-        <span className="font-medium text-slate-800">{program.name}</span>
+        <span className="font-medium text-slate-800 dark:text-white">{program.name}</span>
         <Badge variant="outline" className={cn("ml-auto text-xs", getStatusColor(program.status || "Active"))}>
           {program.status || "Active"}
         </Badge>
@@ -143,7 +149,7 @@ function ProgramSection({ program, workItems }: { program: Program; workItems: W
         <div className="space-y-2 pl-6">
           {programWorkItems.length > 0 ? (
             programWorkItems.map(item => (
-              <WorkItemCard key={item.id} item={item} />
+              <WorkItemCard key={item.id} item={item} onEdit={onEditWorkItem} />
             ))
           ) : (
             <p className="text-sm text-slate-400 italic">No work items in this program</p>
@@ -154,7 +160,7 @@ function ProgramSection({ program, workItems }: { program: Program; workItems: W
   );
 }
 
-function PortfolioCard({ portfolio, programs, workItems }: { portfolio: Portfolio; programs: Program[]; workItems: WorkItem[] }) {
+function PortfolioCard({ portfolio, programs, workItems, onEditWorkItem }: { portfolio: Portfolio; programs: Program[]; workItems: WorkItem[]; onEditWorkItem: (item: WorkItem) => void }) {
   const [isOpen, setIsOpen] = useState(true);
   const portfolioPrograms = programs.filter(p => p.portfolioId === portfolio.id);
   const portfolioWorkItems = workItems.filter(w => {
@@ -171,7 +177,7 @@ function PortfolioCard({ portfolio, programs, workItems }: { portfolio: Portfoli
     <Card className="overflow-hidden" data-testid={`card-portfolio-${portfolio.id}`}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors" data-testid={`trigger-portfolio-${portfolio.id}`}>
+          <CardHeader className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" data-testid={`trigger-portfolio-${portfolio.id}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isOpen ? <ChevronDown className="h-5 w-5 text-slate-400" /> : <ChevronRight className="h-5 w-5 text-slate-400" />}
@@ -188,7 +194,7 @@ function PortfolioCard({ portfolio, programs, workItems }: { portfolio: Portfoli
                 </Badge>
               </div>
             </div>
-            <div className="flex items-center gap-6 mt-3 text-sm text-slate-600 pl-8">
+            <div className="flex items-center gap-6 mt-3 text-sm text-slate-600 dark:text-slate-400 pl-8">
               <div className="flex items-center gap-2">
                 <Folder className="h-4 w-4 text-slate-400" />
                 <span><strong>{portfolioPrograms.length}</strong> Programs</span>
@@ -224,7 +230,7 @@ function PortfolioCard({ portfolio, programs, workItems }: { portfolio: Portfoli
             {portfolioPrograms.length > 0 ? (
               <div className="space-y-2">
                 {portfolioPrograms.map(program => (
-                  <ProgramSection key={program.id} program={program} workItems={workItems} />
+                  <ProgramSection key={program.id} program={program} workItems={workItems} onEditWorkItem={onEditWorkItem} />
                 ))}
               </div>
             ) : (
@@ -243,8 +249,13 @@ export default function Portfolio() {
   const { data: programs = [], isLoading: programsLoading } = usePrograms();
   const createWorkItem = useCreateWorkItem();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const portfolioHierarchyRef = useRef<HTMLDivElement>(null);
   
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingWorkItem, setEditingWorkItem] = useState<WorkItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [drillDownView, setDrillDownView] = useState<"none" | "programs" | "budget">("none");
   const [formData, setFormData] = useState({
     title: "",
     type: "Demand",
@@ -432,7 +443,11 @@ export default function Portfolio() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card data-testid="stat-portfolios">
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow" 
+          data-testid="stat-portfolios"
+          onClick={() => portfolioHierarchyRef.current?.scrollIntoView({ behavior: 'smooth' })}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-indigo-100 rounded-lg">
@@ -445,7 +460,11 @@ export default function Portfolio() {
             </div>
           </CardContent>
         </Card>
-        <Card data-testid="stat-programs">
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow" 
+          data-testid="stat-programs"
+          onClick={() => portfolioHierarchyRef.current?.scrollIntoView({ behavior: 'smooth' })}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
@@ -458,7 +477,11 @@ export default function Portfolio() {
             </div>
           </CardContent>
         </Card>
-        <Card data-testid="stat-workitems">
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow" 
+          data-testid="stat-workitems"
+          onClick={() => navigate('/work')}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -471,7 +494,11 @@ export default function Portfolio() {
             </div>
           </CardContent>
         </Card>
-        <Card data-testid="stat-budget">
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-shadow" 
+          data-testid="stat-budget"
+          onClick={() => portfolioHierarchyRef.current?.scrollIntoView({ behavior: 'smooth' })}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-emerald-100 rounded-lg">
@@ -490,13 +517,14 @@ export default function Portfolio() {
         <h2 className="text-xl font-bold text-slate-800">Portfolio Hierarchy</h2>
         
         {portfolios.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-4" ref={portfolioHierarchyRef}>
             {portfolios.map(portfolio => (
               <PortfolioCard 
                 key={portfolio.id} 
                 portfolio={portfolio} 
                 programs={programs}
                 workItems={workItems}
+                onEditWorkItem={(item) => { setEditingWorkItem(item); setEditDialogOpen(true); }}
               />
             ))}
           </div>
@@ -515,12 +543,18 @@ export default function Portfolio() {
             <h2 className="text-xl font-bold text-slate-800 mb-4">Unassigned Work Items</h2>
             <div className="grid gap-3">
               {unassignedWorkItems.map(item => (
-                <WorkItemCard key={item.id} item={item} />
+                <WorkItemCard key={item.id} item={item} onEdit={(item) => { setEditingWorkItem(item); setEditDialogOpen(true); }} />
               ))}
             </div>
           </div>
         )}
       </div>
+
+      <WorkItemEditDialog 
+        workItem={editingWorkItem} 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+      />
     </Layout>
   );
 }

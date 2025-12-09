@@ -18,11 +18,14 @@ import {
   Calendar,
   Trash2,
   Loader2,
-  X
+  X,
+  Pencil
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useSearch, useLocation } from "wouter";
+import { WorkItemEditDialog } from "@/components/WorkItemEditDialog";
+import type { WorkItem } from "@shared/schema";
 
 export default function Work() {
   const { data: workItems = [], isLoading } = useWorkItems();
@@ -31,6 +34,8 @@ export default function Work() {
   const { toast } = useToast();
   const searchParams = useSearch();
   const [, navigate] = useLocation();
+  const [editingWorkItem, setEditingWorkItem] = useState<WorkItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const urlParams = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
   const tabFromUrl = urlParams.get("tab");
@@ -288,7 +293,15 @@ export default function Work() {
           <TabsContent value="all" className="space-y-4">
             {filteredItems.length > 0 ? (
               filteredItems.map((item) => (
-                <Card key={item.id} className="hover:border-indigo-300 transition-colors group" data-testid={`card-work-item-${item.id}`}>
+                <Card 
+                  key={item.id} 
+                  className="hover:border-indigo-300 transition-colors group cursor-pointer" 
+                  data-testid={`card-work-item-${item.id}`}
+                  onClick={() => {
+                    setEditingWorkItem(item);
+                    setEditDialogOpen(true);
+                  }}
+                >
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex items-start gap-4">
@@ -333,16 +346,34 @@ export default function Work() {
                       </div>
 
                       <div className="flex flex-col items-end gap-4 min-w-[200px]">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-red-400 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={deleteWorkItem.isPending}
-                          data-testid={`button-delete-work-item-${item.id}`}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingWorkItem(item);
+                              setEditDialogOpen(true);
+                            }}
+                            data-testid={`button-edit-work-item-${item.id}`}
+                          >
+                            <Pencil className="h-5 w-5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id);
+                            }}
+                            disabled={deleteWorkItem.isPending}
+                            data-testid={`button-delete-work-item-${item.id}`}
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
                         <div className="w-full">
                           <div className="flex justify-between text-xs mb-1.5">
                             <span className="text-slate-500">Progress</span>
@@ -365,7 +396,14 @@ export default function Work() {
           <TabsContent value="projects" className="space-y-4">
             {filteredItems.filter(i => i.type === "Project").length > 0 ? (
               filteredItems.filter(i => i.type === "Project").map((item) => (
-                <Card key={item.id} className="hover:border-indigo-300 transition-colors">
+                <Card 
+                  key={item.id} 
+                  className="hover:border-indigo-300 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setEditingWorkItem(item);
+                    setEditDialogOpen(true);
+                  }}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -387,7 +425,14 @@ export default function Work() {
           <TabsContent value="demands" className="space-y-4">
             {filteredItems.filter(i => i.type === "Demand").length > 0 ? (
               filteredItems.filter(i => i.type === "Demand").map((item) => (
-                <Card key={item.id} className="hover:border-indigo-300 transition-colors">
+                <Card 
+                  key={item.id} 
+                  className="hover:border-indigo-300 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setEditingWorkItem(item);
+                    setEditDialogOpen(true);
+                  }}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -409,7 +454,14 @@ export default function Work() {
           <TabsContent value="ktlo" className="space-y-4">
             {filteredItems.filter(i => i.type === "KTLO").length > 0 ? (
               filteredItems.filter(i => i.type === "KTLO").map((item) => (
-                <Card key={item.id} className="hover:border-indigo-300 transition-colors">
+                <Card 
+                  key={item.id} 
+                  className="hover:border-indigo-300 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setEditingWorkItem(item);
+                    setEditDialogOpen(true);
+                  }}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -429,6 +481,12 @@ export default function Work() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <WorkItemEditDialog 
+        workItem={editingWorkItem} 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+      />
     </Layout>
   );
 }
