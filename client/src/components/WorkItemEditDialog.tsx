@@ -31,7 +31,7 @@ export function WorkItemEditDialog({ workItem, open, onOpenChange }: WorkItemEdi
     endDate: "",
     description: "",
     progress: 0,
-    programId: "",
+    programId: "none",
   });
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function WorkItemEditDialog({ workItem, open, onOpenChange }: WorkItemEdi
         endDate: workItem.endDate,
         description: workItem.description,
         progress: workItem.progress,
-        programId: workItem.programId?.toString() || "",
+        programId: workItem.programId?.toString() || "none",
       });
     }
   }, [workItem]);
@@ -71,7 +71,7 @@ export function WorkItemEditDialog({ workItem, open, onOpenChange }: WorkItemEdi
           endDate: formData.endDate,
           description: formData.description,
           progress: formData.progress,
-          programId: formData.programId ? parseInt(formData.programId) : null,
+          programId: formData.programId && formData.programId !== "none" ? parseInt(formData.programId) : null,
         },
       });
       toast({ title: "Success", description: "Work item updated successfully" });
@@ -109,7 +109,7 @@ export function WorkItemEditDialog({ workItem, open, onOpenChange }: WorkItemEdi
                   <SelectValue placeholder="Select a program" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Program</SelectItem>
+                  <SelectItem value="none">No Program</SelectItem>
                   {programs.map(program => (
                     <SelectItem key={program.id} value={program.id.toString()}>
                       {program.name}

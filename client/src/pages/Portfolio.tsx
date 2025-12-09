@@ -264,7 +264,7 @@ export default function Portfolio() {
     startDate: "",
     endDate: "",
     description: "",
-    programId: "",
+    programId: "none",
   });
 
   const isLoading = workItemsLoading || portfoliosLoading || programsLoading;
@@ -288,7 +288,7 @@ export default function Portfolio() {
         endDate: formData.endDate,
         description: formData.description,
         progress: 0,
-        programId: formData.programId ? parseInt(formData.programId) : null,
+        programId: formData.programId && formData.programId !== "none" ? parseInt(formData.programId) : null,
       });
       toast({ title: "Success", description: "Work item created successfully" });
       setDialogOpen(false);
@@ -300,7 +300,7 @@ export default function Portfolio() {
         startDate: "",
         endDate: "",
         description: "",
-        programId: "",
+        programId: "none",
       });
     } catch (error) {
       toast({ title: "Error", description: "Failed to create work item", variant: "destructive" });
@@ -360,7 +360,7 @@ export default function Portfolio() {
                       <SelectValue placeholder="Select a program" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Program</SelectItem>
+                      <SelectItem value="none">No Program</SelectItem>
                       {programs.map(program => (
                         <SelectItem key={program.id} value={program.id.toString()}>
                           {program.name}
