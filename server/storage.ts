@@ -29,6 +29,7 @@ import {
   portfolios,
   programs,
   workItems,
+  workItemSkills,
   allocations,
 } from "@shared/schema";
 
@@ -82,6 +83,10 @@ export interface IStorage {
   getWorkItemsByProgram(programId: number): Promise<WorkItem[]>;
   updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined>;
   deleteWorkItem(id: number): Promise<void>;
+
+  addWorkItemSkill(workItemId: number, skillId: number, level?: number): Promise<void>;
+  removeWorkItemSkill(workItemId: number, skillId: number): Promise<void>;
+  getWorkItemSkills(workItemId: number): Promise<Skill[]>;
 
   createAllocation(allocation: InsertAllocation): Promise<Allocation>;
   listAllocations(): Promise<Allocation[]>;
@@ -291,6 +296,28 @@ export class DbStorage implements IStorage {
 
   async deleteWorkItem(id: number): Promise<void> {
     await db.delete(workItems).where(eq(workItems.id, id));
+  }
+
+  async addWorkItemSkill(workItemId: number, skillId: number, level = 1): Promise<void> {
+    await db.insert(workItemSkills).values({ workItemId, skillId, levelRequired: level }).onConflictDoNothing();
+  }
+
+  async removeWorkItemSkill(workItemId: number, skillId: number): Promise<void> {
+    await db.delete(workItemSkills).where(
+      and(
+        eq(workItemSkills.workItemId, workItemId),
+        eq(workItemSkills.skillId, skillId)
+      )
+    );
+  }
+
+  async getWorkItemSkills(workItemId: number): Promise<Skill[]> {
+    const result = await db
+      .select({ skill: skills })
+      .from(workItemSkills)
+      .innerJoin(skills, eq(workItemSkills.skillId, skills.id))
+      .where(eq(workItemSkills.workItemId, workItemId));
+    return result.map((r: { skill: Skill }) => r.skill);
   }
 
   async createAllocation(allocation: InsertAllocation): Promise<Allocation> {

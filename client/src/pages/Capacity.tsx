@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Layout from "@/components/layout/Layout";
 import { useResources, useAllocations, useWorkItems, useCreateAllocation } from "@/lib/queries";
 import { Card } from "@/components/ui/card";
@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Download, Plus, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, addWeeks, startOfWeek, subWeeks } from "date-fns";
+import { format, addWeeks, startOfWeek } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Capacity() {
   const { data: resources = [], isLoading: resourcesLoading } = useResources();
@@ -40,6 +41,10 @@ export default function Capacity() {
       fullDate: date
     };
   });
+
+  const workItemMap = useMemo(() => {
+    return new Map(workItems.map(w => [w.id, w]));
+  }, [workItems]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,78 +192,131 @@ export default function Capacity() {
           </div>
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-green-200 rounded-sm"></div>
-              <span>Available</span>
+              <div className="w-3 h-3 bg-slate-300 rounded-sm"></div>
+              <span>KTLO/Admin</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-indigo-200 rounded-sm"></div>
-              <span>Allocated</span>
+              <div className="w-3 h-3 bg-indigo-500 rounded-sm"></div>
+              <span>Project Work</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-red-200 rounded-sm"></div>
+              <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
               <span>Overbooked</span>
             </div>
           </div>
         </div>
         <div className="overflow-x-auto">
           {resources.length > 0 ? (
-            <table className="w-full text-sm text-left border-collapse">
-              <thead>
-                <tr>
-                  <th className="p-4 border-b border-r border-slate-200 bg-slate-50 min-w-[250px] sticky left-0 z-10">Resource</th>
-                  {weeks.map(week => (
-                    <th key={week.label} className="p-2 border-b border-slate-200 bg-slate-50 min-w-[80px] text-center font-medium text-slate-600">
-                      {week.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {resources.map(resource => {
-                  const resourceAllocations = allocations.filter(a => a.resourceId === resource.id);
-                  
-                  return (
-                    <tr key={resource.id} className="group hover:bg-slate-50/50 transition-colors" data-testid={`row-capacity-${resource.id}`}>
-                      <td className="p-4 border-b border-r border-slate-200 bg-white group-hover:bg-slate-50/50 sticky left-0 z-10">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">{resource.avatar}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-slate-900">{resource.name}</div>
-                            <div className="text-xs text-slate-500">{resource.role}</div>
+            <TooltipProvider>
+              <table className="w-full text-sm text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th className="p-4 border-b border-r border-slate-200 bg-slate-50 min-w-[250px] sticky left-0 z-10">Resource</th>
+                    {weeks.map(week => (
+                      <th key={week.label} className="p-2 border-b border-slate-200 bg-slate-50 min-w-[80px] text-center font-medium text-slate-600">
+                        {week.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {resources.map(resource => {
+                    const resourceAllocations = allocations.filter(a => a.resourceId === resource.id);
+
+                    return (
+                      <tr key={resource.id} className="group hover:bg-slate-50/50 transition-colors" data-testid={`row-capacity-${resource.id}`}>
+                        <td className="p-4 border-b border-r border-slate-200 bg-white group-hover:bg-slate-50/50 sticky left-0 z-10">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">{resource.avatar}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-slate-900">{resource.name}</div>
+                              <div className="text-xs text-slate-500">{resource.role}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      {weeks.map(week => {
-                        const weeklyHours = resourceAllocations
-                          .filter(a => a.weekStartDate === week.date)
-                          .reduce((acc, a) => acc + parseFloat(a.hours), 0);
+                        </td>
+                        {weeks.map(week => {
+                          const weeklyAllocs = resourceAllocations.filter(a => a.weekStartDate === week.date);
 
-                        const utilization = resource.capacity > 0 ? (weeklyHours / resource.capacity) * 100 : 0;
-                        
-                        let bgClass = "bg-white";
-                        if (utilization === 0) bgClass = "bg-white";
-                        else if (utilization <= 50) bgClass = "bg-green-50";
-                        else if (utilization <= 80) bgClass = "bg-indigo-50";
-                        else if (utilization <= 100) bgClass = "bg-blue-100";
-                        else bgClass = "bg-red-100";
+                          let baseline = 0;
+                          let project = 0;
 
-                        let textClass = "text-slate-400";
-                        if (utilization > 100) textClass = "text-red-700 font-bold";
-                        else if (utilization > 0) textClass = "text-slate-700 font-medium";
+                          weeklyAllocs.forEach(a => {
+                            const hours = parseFloat(a.hours);
+                            const w = workItemMap.get(a.workItemId);
+                            if (w?.type === 'KTLO') {
+                              baseline += hours;
+                            } else {
+                              project += hours;
+                            }
+                          });
 
-                        return (
-                          <td key={week.label} className={cn("p-2 border-b border-slate-200 text-center border-r border-slate-100", bgClass)}>
-                            <span className={textClass}>{weeklyHours > 0 ? weeklyHours : "-"}</span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          const total = baseline + project;
+                          const capacity = resource.capacity || 40;
+                          const isOverbooked = total > capacity;
+                          const netAvailable = Math.max(0, capacity - baseline - project);
+                          const utilization = capacity > 0 ? (total / capacity) * 100 : 0;
+
+                          // Dynamic styles
+                          let bgClass = "bg-white";
+                          if (isOverbooked) bgClass = "bg-red-50";
+                          else if (utilization > 0) bgClass = "bg-slate-50/30";
+
+                          return (
+                            <Tooltip key={week.label}>
+                              <TooltipTrigger asChild>
+                                <td className={cn("p-2 border-b border-slate-200 border-r border-slate-100 relative h-12 align-bottom pb-0", bgClass)}>
+                                  {total > 0 && (
+                                    <div className="flex flex-col justify-end h-full w-full gap-0.5 px-2 pb-2">
+                                       {/* Visualization Bar */}
+                                      <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-100">
+                                        {baseline > 0 && (
+                                          <div
+                                            className="bg-slate-400 h-full"
+                                            style={{ width: `${Math.min(100, (baseline / capacity) * 100)}%` }}
+                                          />
+                                        )}
+                                        {project > 0 && (
+                                          <div
+                                            className={cn("h-full", isOverbooked ? "bg-red-500" : "bg-indigo-500")}
+                                            style={{ width: `${Math.min(100, (project / capacity) * 100)}%` }}
+                                          />
+                                        )}
+                                      </div>
+
+                                      <div className="flex justify-between items-end">
+                                        <span className={cn("text-xs font-medium", isOverbooked ? "text-red-600" : "text-slate-700")}>
+                                          {total}h
+                                        </span>
+                                        {isOverbooked && <AlertTriangle className="h-3 w-3 text-red-500" />}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {total === 0 && <span className="text-slate-300 text-xs block text-center py-3">-</span>}
+                                </td>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="text-xs space-y-1">
+                                  <div className="font-bold">{week.label}</div>
+                                  <div className="flex justify-between gap-4"><span className="text-slate-500">Capacity:</span> <span>{capacity}h</span></div>
+                                  <div className="flex justify-between gap-4"><span className="text-slate-500">KTLO/Admin:</span> <span>{baseline}h</span></div>
+                                  <div className="flex justify-between gap-4"><span className="text-slate-500">Projects:</span> <span>{project}h</span></div>
+                                  <div className="border-t pt-1 mt-1 flex justify-between gap-4 font-medium">
+                                    <span>Net Available:</span>
+                                    <span className={netAvailable === 0 ? "text-red-500" : "text-green-600"}>{netAvailable}h</span>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TooltipProvider>
           ) : (
             <div className="p-8 text-center text-slate-500">
               No resources yet. Add resources first to see capacity planning.

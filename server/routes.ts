@@ -10,8 +10,10 @@ import {
   insertProgramSchema,
   insertWorkItemSchema,
   insertAllocationSchema,
+  insertWorkItemSkillSchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { suggestResources, autoAllocate, shiftAllocations } from "./planning";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -545,6 +547,18 @@ export async function registerRoutes(
       if (!workItem) {
         return res.status(404).json({ error: "Work item not found" });
       }
+
+      // Reactivity: If dates changed, shift allocations
+      if (req.body.startDate || req.body.endDate) {
+        // Run in background or await? Await to ensure consistency for now.
+        try {
+          await shiftAllocations(id);
+        } catch (e) {
+          console.error("Failed to shift allocations", e);
+          // Don't fail the request, just log
+        }
+      }
+
       res.json(workItem);
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -567,6 +581,80 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to delete work item" });
     }
   });
+
+  // Planning
+  app.post("/api/planning/suggest-resources", async (req, res) => {
+    try {
+      const { workItemId } = req.body;
+      if (!workItemId) {
+        return res.status(400).json({ error: "Missing workItemId" });
+      }
+      const suggestions = await suggestResources(parseInt(workItemId));
+      res.json(suggestions);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to suggest resources", details: error.message });
+    }
+  });
+
+  app.post("/api/planning/allocate", async (req, res) => {
+    try {
+      const { resourceId, workItemId, totalHours } = req.body;
+      if (!resourceId || !workItemId || !totalHours) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      const result = await autoAllocate(parseInt(resourceId), parseInt(workItemId), parseFloat(totalHours));
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to allocate resources", details: error.message });
+    }
+  });
+
+  // Work Item Skills
+  app.get("/api/work-items/:id/skills", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid work item ID" });
+      }
+      const skills = await storage.getWorkItemSkills(id);
+      res.json(skills);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch work item skills" });
+    }
+  });
+
+  app.post("/api/work-items/:id/skills", async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id);
+      const { skillId, levelRequired } = req.body;
+
+      if (!skillId) {
+        return res.status(400).json({ error: "Missing skillId" });
+      }
+
+      await storage.addWorkItemSkill(workItemId, parseInt(skillId), levelRequired ? parseInt(levelRequired) : 1);
+      res.status(201).json({ success: true });
+    } catch (error: any) {
+       res.status(500).json({ error: "Failed to add skill to work item" });
+    }
+  });
+
+  app.delete("/api/work-items/:id/skills/:skillId", async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id);
+      const skillId = parseInt(req.params.skillId);
+
+      if (isNaN(workItemId) || isNaN(skillId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      await storage.removeWorkItemSkill(workItemId, skillId);
+      res.status(204).send();
+    } catch (error: any) {
+       res.status(500).json({ error: "Failed to remove skill from work item" });
+    }
+  });
+
 
   // Allocations
   app.get("/api/allocations", async (req, res) => {
